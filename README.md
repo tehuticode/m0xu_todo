@@ -2,7 +2,7 @@
 
 ## Tech Stack (Could change)
 
-- **Operating System:** XAMPP (Apache, MySql, PHP)
+- **Server:** AWS Lambda
 - **Backend:** Node.js with express
 - **Database:** MongoDB
 - **Authentication:** JWT
