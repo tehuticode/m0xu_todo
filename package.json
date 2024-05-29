@@ -1,7 +1,7 @@
 {
   "name": "m0xu_todo",
   "version": "1.0.0",
-  "description": "",
+  "description": "- **Operating System:** XAMPP (Apache, MySql, PHP)\r - **Backend:** Node.js with express\r - **Database:** MongoDB\r - **Authentication:** JWT\r - **HTTP Client:** Axios\r - **CORS handling:** Express CORS middleware\r - **Version control:** Git and GitHub\r - **Cloud Platform:** AWS\r - **Documentation Tool:** Postman",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,7 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "mongoose": "^8.3.4",
+    "mongoose": "^8.4.0",
     "mysql": "^2.18.1"
   }
 }
