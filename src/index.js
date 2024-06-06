@@ -1,9 +1,10 @@
 
+
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const connectDB = require('./db'); // Import the database connection
 const Todo = require('./models/Todo');
 
 const app = express();
@@ -11,10 +12,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MongoDB connection
-mongoose.connect('mongodb://localhost:27017/todo')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('Could not connect to MongoDB', err));
+// Connect to MongoDB
+connectDB();
 
 // Mock users for authentication
 const users = [
@@ -26,7 +25,7 @@ const users = [
 const authenticate = (req, res, next) => {
   const token = req.header('Authorization').replace('Bearer ', '');
   try {
-    const decoded = jwt.verify(token, 'secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = users.find(user => user.id === decoded.id);
     next();
   } catch (err) {
@@ -48,7 +47,7 @@ app.post('/login', (req, res) => {
   if (!user || !bcrypt.compareSync(req.body.password, user.password)) {
     return res.status(400).send({ error: 'Invalid credentials' });
   }
-  const token = jwt.sign({ id: user.id }, 'secret', { expiresIn: '1h' });
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
   res.send({ token });
 });
 
@@ -84,32 +83,4 @@ app.post('/items', authenticate, authorize(['admin']), async (req, res) => {
     res.status(201).json(savedTodo);
   } catch (err) {
     res.status(400).json({ message: 'Bad request' });
-  }
-});
-
-app.put('/items/:id', authenticate, authorize(['admin']), async (req, res) => {
-  try {
-    const updatedTodo = await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedTodo) return res.status(404).json({ message: 'Item not found' });
-    res.json(updatedTodo);
-  } catch (err) {
-    res.status(400).json({ message: 'Bad request' });
-  }
-});
-
-app.delete('/items/:id', authenticate, authorize(['admin']), async (req, res) => {
-  try {
-    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
-    if (!deletedTodo) return res.status(404).json({ message: 'Item not found' });
-    res.json({ message: 'Item deleted' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Start the server
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
 

@@ -1,0 +1,34 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: tehuticode
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: todo-assessment
+
+service: todo-api
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+
+functions:
+  app:
+    handler: handler.app
+    events:
+      - http:
+          path: items
+          method: get
+      - http:
+          path: items/{id}
+          method: get
+      - http:
+          path: items
+          method: post
+      - http:
+          path: items/{id}
+          method: put
+      - http:
+          path: items/{id}
+          method: delete
+
+plugins:
+  - serverless-offline

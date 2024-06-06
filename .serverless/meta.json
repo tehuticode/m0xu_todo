@@ -1,0 +1,89 @@
+{
+  "/home/m0xu_p/1-Projects/m0xu_todo": {
+    "versionSfCore": null,
+    "versionFramework": "4.0.38",
+    "isWithinCompose": false,
+    "composeOrgName": null,
+    "servicePath": "/home/m0xu_p/1-Projects/m0xu_todo",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "todo-api",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs14.x",
+        "region": "us-east-1"
+      },
+      "functions": {
+        "app": {
+          "handler": "handler.app",
+          "events": [
+            {
+              "http": {
+                "path": "items",
+                "method": "get"
+              }
+            },
+            {
+              "http": {
+                "path": "items/{id}",
+                "method": "get"
+              }
+            },
+            {
+              "http": {
+                "path": "items",
+                "method": "post"
+              }
+            },
+            {
+              "http": {
+                "path": "items/{id}",
+                "method": "put"
+              }
+            },
+            {
+              "http": {
+                "path": "items/{id}",
+                "method": "delete"
+              }
+            }
+          ]
+        }
+      },
+      "plugins": [
+        "serverless-offline"
+      ]
+    },
+    "serviceRawFile": "\nservice: todo-api\n\nprovider:\n  name: aws\n  runtime: nodejs14.x\n  region: us-east-1\n\nfunctions:\n  app:\n    handler: handler.app\n    events:\n      - http:\n          path: items\n          method: get\n      - http:\n          path: items/{id}\n          method: get\n      - http:\n          path: items\n          method: post\n      - http:\n          path: items/{id}\n          method: put\n      - http:\n          path: items/{id}\n          method: delete\n\nplugins:\n  - serverless-offline\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "error": {
+      "message": "AWS credentials missing or invalid. Run \"serverless\" to set up AWS credentials, or learn more in our docs: http://slss.io/aws-creds-setup. Original error from AWS: Could not load credentials from any providers",
+      "code": "AWS_CREDENTIALS_MISSING"
+    },
+    "accessKeyV2": "<REDACTED>",
+    "accessKeyV1": "<REDACTED>",
+    "orgId": "94056fe5-e792-4fa2-8081-eaf06feb118d",
+    "orgName": "tehuticode",
+    "userId": "Tpjg0CmJpF59YCvBJK",
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": true,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "userName": "tehuticode",
+    "subscription": null,
+    "userEmail": "danielpalazzolo4@gmail.com",
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}
