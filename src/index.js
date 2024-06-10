@@ -83,4 +83,8 @@ app.post('/items', authenticate, authorize(['admin']), async (req, res) => {
     res.status(201).json(savedTodo);
   } catch (err) {
     res.status(400).json({ message: 'Bad request' });
+}
+});
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
