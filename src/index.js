@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const connectDB = require('./db'); // Import the database connection
+const { connectDB, disconnectDB } = require('./db'); // Import the database connection
 const Todo = require('./models/Todo');
 
 const app = express();
@@ -83,8 +83,19 @@ app.post('/items', authenticate, authorize(['admin']), async (req, res) => {
     res.status(201).json(savedTodo);
   } catch (err) {
     res.status(400).json({ message: 'Bad request' });
-}
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  await disconnectDB();
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
