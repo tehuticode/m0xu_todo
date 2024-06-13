@@ -1,4 +1,3 @@
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -86,9 +85,13 @@ app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res)
 app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
-    if (!todo) return res.status(404).json({ message: 'Item not found' });
+    if (!todo) {
+      console.log(`Todo with ID ${req.params.id} not found`);
+      return res.status(404).json({ message: 'Item not found' });
+    }
     res.json(todo);
   } catch (err) {
+    console.error('Error fetching todo by ID:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -127,4 +130,3 @@ process.on('SIGINT', async () => {
     process.exit(1);
   });
 });
-
