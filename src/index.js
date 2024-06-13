@@ -1,6 +1,6 @@
 
-
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -23,7 +23,12 @@ const users = [
 
 // Middleware for checking authentication
 const authenticate = (req, res, next) => {
-  const token = req.header('Authorization').replace('Bearer ', '');
+  const authHeader = req.header('Authorization');
+  if (!authHeader) {
+    return res.status(401).send({ error: 'Authorization header missing' });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = users.find(user => user.id === decoded.id);
@@ -51,27 +56,8 @@ app.post('/login', (req, res) => {
   res.send({ token });
 });
 
-// API Endpoints with authentication and authorization
-app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
-  try {
-    const todos = await Todo.find();
-    res.json(todos);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/items/:id', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
-  try {
-    const todo = await Todo.findById(req.params.id);
-    if (!todo) return res.status(404).json({ message: 'Item not found' });
-    res.json(todo);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/items', authenticate, authorize(['admin']), async (req, res) => {
+// Create a new Todo
+app.post('/todos', authenticate, authorize(['admin']), async (req, res) => {
   const newTodo = new Todo({
     title: req.body.title,
     details: req.body.details,
@@ -86,6 +72,49 @@ app.post('/items', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
+// Read all Todos
+app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
+  try {
+    const todos = await Todo.find();
+    res.json(todos);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Read a single Todo by ID
+app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
+  try {
+    const todo = await Todo.findById(req.params.id);
+    if (!todo) return res.status(404).json({ message: 'Item not found' });
+    res.json(todo);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update a Todo by ID
+app.put('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
+  try {
+    const updatedTodo = await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!updatedTodo) return res.status(404).json({ message: 'Item not found' });
+    res.json(updatedTodo);
+  } catch (err) {
+    res.status(400).json({ message: 'Bad request' });
+  }
+});
+
+// Delete a Todo by ID
+app.delete('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
+  try {
+    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
+    if (!deletedTodo) return res.status(404).json({ message: 'Item not found' });
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
@@ -95,7 +124,7 @@ process.on('SIGINT', async () => {
   await disconnectDB();
   server.close(() => {
     console.log('Server closed');
-    process.exit(0);
+    process.exit(1);
   });
 });
 

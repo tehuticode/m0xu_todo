@@ -1,9 +1,16 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Load .env file from the root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
     console.log('MongoDB connected successfully');
   } catch (err) {
     console.error('MongoDB connection error:', err);
