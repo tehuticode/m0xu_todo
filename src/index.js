@@ -3,22 +3,50 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 const { connectDB, disconnectDB } = require('./db'); // Import the database connection
 const Todo = require('./models/Todo');
+
+dotenv.config();
 
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: 'GET,POST,PUT,DELETE',
+  allowedHeaders: 'Authorization, Content-Type'
+}));
+
+// Enable pre-flight requests for all routes
+app.options('*', cors());
+
+app.use((req, res, next) => {
+  console.log(`${req.method} request for '${req.url}'`);
+  next();
+});
 
 // Connect to MongoDB
 connectDB();
 
 // Mock users for authentication
-const users = [
+/* const users = [
   { id: 1, username: 'admin', password: bcrypt.hashSync('admin123', 8), role: 'admin' },
   { id: 2, username: 'viewer', password: bcrypt.hashSync('viewer123', 8), role: 'viewer' }
-];
+];*/
+
+// User schema
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+  email: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  role: { type: String, required: true, default: 'user' }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// In-memory token blacklist
+let tokenBlacklist = [];
 
 // Middleware for checking authentication
 const authenticate = (req, res, next) => {
@@ -28,9 +56,13 @@ const authenticate = (req, res, next) => {
   }
 
   const token = authHeader.replace('Bearer ', '');
+  if (tokenBlacklist.includes(token)) {
+    return res.status(401).send({ error: 'Token has been logged out' });
+  }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = users.find(user => user.id === decoded.id);
+    req.user = decoded;
     next();
   } catch (err) {
     res.status(401).send({ error: 'Please authenticate.' });
@@ -45,17 +77,42 @@ const authorize = (roles) => (req, res, next) => {
   next();
 };
 
-// Login endpoint
-app.post('/login', (req, res) => {
-  const user = users.find(u => u.username === req.body.username);
-  if (!user || !bcrypt.compareSync(req.body.password, user.password)) {
-    return res.status(400).send({ error: 'Invalid credentials' });
+// User Sign-Up Endpoint
+app.post('/signup', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, email, password: hashedPassword, role: 'user' });
+    await user.save();
+    res.status(201).send('User registered successfully');
+  } catch (error) {
+    res.status(400).send('Error registering user');
   }
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-  res.send({ token });
 });
 
-// Create a new Todo
+// User Sign-In Endpoint
+app.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(400).send('Invalid credentials');
+    }
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (error) {
+    res.status(400).send('Error logging in');
+  }
+});
+
+// User Sign-Out Endpoint
+app.post('/logout', authenticate, (req, res) => {
+  const token = req.header('Authorization').replace('Bearer ', '');
+  tokenBlacklist.push(token);
+  res.send('User logged out successfully');
+});
+
+// Create a new Todo (only admin can create)
 app.post('/todos', authenticate, authorize(['admin']), async (req, res) => {
   const newTodo = new Todo({
     title: req.body.title,
@@ -71,7 +128,7 @@ app.post('/todos', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
-// Read all Todos
+// Read all Todos (admin and viewer can read)
 app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
   try {
     const todos = await Todo.find();
@@ -81,7 +138,7 @@ app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res)
   }
 });
 
-// Read a single Todo by ID
+// Read a single Todo by ID (admin and viewer can read)
 app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
@@ -96,7 +153,7 @@ app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, 
   }
 });
 
-// Update a Todo by ID
+// Update a Todo by ID (only admin can update)
 app.put('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   try {
     const updatedTodo = await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -107,7 +164,7 @@ app.put('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
-// Delete a Todo by ID
+// Delete a Todo by ID (only admin can delete)
 app.delete('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   try {
     const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
