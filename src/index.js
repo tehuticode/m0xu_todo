@@ -29,11 +29,14 @@ app.use((req, res, next) => {
 // Connect to MongoDB
 connectDB();
 
+// Swagger setup
+require('./swagger')(app);
+
 // Mock users for authentication
-/* const users = [
+const users = [
   { id: 1, username: 'admin', password: bcrypt.hashSync('admin123', 8), role: 'admin' },
   { id: 2, username: 'viewer', password: bcrypt.hashSync('viewer123', 8), role: 'viewer' }
-];*/
+];
 
 // User schema
 const userSchema = new mongoose.Schema({
@@ -86,9 +89,37 @@ app.post('/signup', async (req, res) => {
     await user.save();
     res.status(201).send('User registered successfully');
   } catch (error) {
-    res.status(400).send('Error registering user');
+    console.error('Error registering user:', error);
+    res.status(400).send(`Error registering user: ${error.message}`);
   }
 });
+
+// User Sign-Up Endpoint
+/**
+ * @swagger
+ * /signup:
+ *   post:
+ *     summary: User sign-up
+ *     description: Register a new user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Error registering user
+ */
 
 // User Sign-In Endpoint
 app.post('/login', async (req, res) => {
@@ -105,12 +136,49 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// User Sign-In Endpoint
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user and return a JWT token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *       400:
+ *         description: Invalid credentials
+ */
+
 // User Sign-Out Endpoint
 app.post('/logout', authenticate, (req, res) => {
   const token = req.header('Authorization').replace('Bearer ', '');
   tokenBlacklist.push(token);
   res.send('User logged out successfully');
 });
+
+// User Sign-Out Endpoint
+/**
+ * @swagger
+ * /logout:
+ *   post:
+ *     summary: User logout
+ *     description: Log out the user and invalidate the token.
+ *     responses:
+ *       200:
+ *         description: Successful logout
+ */
 
 // Create a new Todo (only admin can create)
 app.post('/todos', authenticate, authorize(['admin']), async (req, res) => {
@@ -128,17 +196,71 @@ app.post('/todos', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
+// Create a new Todo (only admin can create)
+/**
+ * @swagger
+ * /todos:
+ *   post:
+ *     summary: Create a new Todo
+ *     description: Create a new Todo (only admin can create).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               details:
+ *                 type: string
+ *               due_date:
+ *                 type: string
+ *                 format: date
+ *               completed:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Todo created successfully
+ *       400:
+ *         description: Bad request
+ *   get:
+ *     summary: Get all Todos
+ *     description: Retrieve all Todos (admin and viewer can read).
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       500:
+ *         description: Server error
+ */
+
+
 // Read all Todos (admin and viewer can read)
 app.get('/todos', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
+  console.log('Accessing todos');
   try {
     const todos = await Todo.find();
     res.json(todos);
   } catch (err) {
+    console.error('Server error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Read a single Todo by ID (admin and viewer can read)
+/**
+ * @swagger
+ * /todos:
+ *   get:
+ *     summary: Get all Todos
+ *     description: Retrieve all Todos (admin and viewer can read).
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       500:
+ *         description: Server error
+ */
+
+ // Read a single Todo by ID (admin and viewer can read)
 app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
@@ -153,6 +275,28 @@ app.get('/todos/:id', authenticate, authorize(['admin', 'viewer']), async (req, 
   }
 });
 
+/**
+ * @swagger
+ * /todos/{id}:
+ *   get:
+ *     summary: Get a single Todo
+ *     description: Retrieve a single Todo by ID (admin and viewer can read).
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Server error
+ */
+
+
 // Update a Todo by ID (only admin can update)
 app.put('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   try {
@@ -164,6 +308,44 @@ app.put('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /todos/{id}:
+ *   put:
+ *     summary: Update a Todo
+ *     description: Update a Todo by ID (only admin can update).
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               details:
+ *                 type: string
+ *               due_date:
+ *                 type: string
+ *                 format: date
+ *               completed:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Todo updated successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Item not found
+ */
+
+
 // Delete a Todo by ID (only admin can delete)
 app.delete('/todos/:id', authenticate, authorize(['admin']), async (req, res) => {
   try {
@@ -174,6 +356,28 @@ app.delete('/todos/:id', authenticate, authorize(['admin']), async (req, res) =>
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+/**
+ * @swagger
+ * /todos/{id}:
+ *   delete:
+ *     summary: Delete a Todo
+ *     description: Delete a Todo by ID (only admin can delete).
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Item deleted
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Server error
+ */
+
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
